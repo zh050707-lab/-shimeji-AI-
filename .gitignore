@@ -1,0 +1,24 @@
+# Java build output
+build/
+dist/
+out/
+target/
+*.class
+
+# Binaries
+*.exe
+*.dll
+
+# IDE files
+.idea/
+*.iml
+.project
+.classpath
+.settings/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
