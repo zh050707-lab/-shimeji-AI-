@@ -12,6 +12,15 @@ import com.group_finity.mascot.config.Configuration;
 import com.group_finity.mascot.exception.BehaviorInstantiationException;
 import com.group_finity.mascot.exception.CantBeAliveException;
 import java.awt.Point;
+// 下面是添加的菜单触发器
+import com.group_finity.mascot.Main;
+import com.group_finity.mascot.Mascot;
+import com.group_finity.mascot.action.Action; // 确保 Action 被导入
+import com.group_finity.mascot.behavior.UserBehavior; // 导入 UserBehavior
+import com.group_finity.mascot.ai.AiChatService; // 导入我们的新接口
+import com.group_finity.mascot.ai.DemoChatService; // 导入我们的新实现
+import com.group_finity.mascot.script.VariableMap; // 导入 VariableMap
+import java.awt.MenuItem;
 
 /**
  * 
