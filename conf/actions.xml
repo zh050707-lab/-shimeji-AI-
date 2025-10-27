@@ -293,7 +293,8 @@
 				<Pose Image="/shime6.png" ImageAnchor="64,128" Velocity="0,0" Duration="2" />
 			</Animation>
 		</Action>
-
+		<Action Name="Chat" Class="com.group_finity.mascot.action.ChatAction">
+        	</Action>
 	</ActionList>
 
 	<!-- Actual Behavior -->
