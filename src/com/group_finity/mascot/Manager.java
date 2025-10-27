@@ -18,7 +18,7 @@ import com.group_finity.mascot.Mascot;
 import com.group_finity.mascot.action.Action; // 确保 Action 被导入
 import com.group_finity.mascot.behavior.UserBehavior; // 导入 UserBehavior
 import com.group_finity.mascot.ai.AiChatService; // 导入我们的新接口
-import com.group_finity.mascot.ai.DemoChatService; // 导入我们的新实现
+import com.group_finity.mascot.ai.DeepseekChatService; // 导入 Deepseek 实现
 import com.group_finity.mascot.script.VariableMap; // 导入 VariableMap
 import java.awt.MenuItem;
 
@@ -43,6 +43,12 @@ public class Manager {
 	 */
 	private final List<Mascot> mascots = new ArrayList<Mascot>();
 
+	/**
+     * AI 对话服务实例
+     * OCP: 依赖于抽象 AiChatService
+     */
+private final AiChatService aiService = new DeepseekChatService();
+	
 	/**
 	* The mascot will be added later.
 	* (@Link ConcurrentModificationException) to prevent the addition of the mascot (@link # tick ()) are each simultaneously reflecting.
