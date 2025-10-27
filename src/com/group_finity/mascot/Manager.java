@@ -22,6 +22,15 @@ import com.group_finity.mascot.ai.DeepseekChatService; // 导入 Deepseek 实现
 import com.group_finity.mascot.script.VariableMap; // 导入 VariableMap
 import java.awt.MenuItem;
 
+//下面是ai菜单栏需要的import
+import java.awt.MenuItem;         // 导入菜单项类
+import java.awt.PopupMenu;       // 导入弹出菜单类
+import java.awt.event.ActionEvent; // 导入动作事件类
+import java.awt.event.ActionListener; // 导入动作监听器接口
+import java.awt.event.MouseAdapter; // 导入鼠标事件适配器
+import java.awt.event.MouseEvent;  // 导入鼠标事件类
+
+
 /**
  * 
  * Maintains a list of mascot, the object to time.
@@ -48,6 +57,55 @@ public class Manager {
      * OCP: 依赖于抽象 AiChatService
      */
 private final AiChatService aiService = new DeepseekChatService();
+
+/**
+	 * 为指定的桌宠创建右键弹出菜单。
+	 * @param mascot 需要创建菜单的桌宠实例
+	 * @return 创建好的 PopupMenu 对象
+	 */
+	private PopupMenu constructMenu(final Mascot mascot) {
+		
+        final PopupMenu menu = new PopupMenu(); // 创建一个新的弹出菜单
+
+        // --- AI 对话菜单项 ---
+        // 从语言文件中获取 "ChatWithAI" 的显示文本
+        final MenuItem aiChatItem = new MenuItem(Main.getInstance().getLanguageBundle().getString("ChatWithAI")); 
+        
+        // 为菜单项添加点击事件监听器
+        aiChatItem.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(final ActionEvent e) {
+                // 当菜单项被点击时执行这里的代码
+                try {
+                    // 1. 手动实例化我们的 ChatAction，并注入 AI 服务
+                    Action chatAction = new com.group_finity.mascot.action.ChatAction(
+                        new VariableMap(), // 使用空的参数 Map
+                        aiService          // 将我们之前创建的 aiService 实例传递给 Action
+                    );
+
+                    // 2. 使用 UserBehavior 来包装这个 Action
+                    //    UserBehavior 会强制执行这个 Action 直到它结束 (hasNext() 返回 false)
+                    mascot.setBehavior(new UserBehavior(chatAction));
+                    
+                } catch (Exception ex) {
+                    // 如果创建或设置 Behavior 时出错，记录日志
+                    log.log(Level.WARNING, "无法启动 AI 聊天", ex);
+                    // （可选）你可以在这里向用户显示一个错误提示
+                    // JOptionPane.showMessageDialog(null, "启动 AI 聊天失败: " + ex.getMessage());
+                }
+            }
+        });
+        menu.add(aiChatItem); // 将 AI 对话菜单项添加到菜单中
+        // --- AI 菜单项结束 ---
+
+        // 你可以在这里添加分隔符或其他菜单项 (如果需要)
+        // menu.addSeparator();
+        // final MenuItem exampleItem = new MenuItem("其他功能...");
+        // menu.add(exampleItem);
+
+        return menu; // 返回创建好的菜单
+	}
+
 	
 	/**
 	* The mascot will be added later.
@@ -183,6 +241,20 @@ private final AiChatService aiService = new DeepseekChatService();
 			this.getRemoved().remove(mascot);
 		}
 		mascot.setManager(this);
+		
+		// 为桌宠的窗口添加鼠标事件监听器
+		mascot.getWindow().addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseReleased(final MouseEvent e) {
+                // 检查事件是否是弹出菜单触发器（通常是鼠标右键点击）
+                if (e.isPopupTrigger()) {
+                    // 调用我们添加的 constructMenu 方法来创建菜单，
+                    // 并在鼠标点击的位置显示它
+                    constructMenu(mascot).show(mascot.getWindow(), e.getX(), e.getY());
+                }
+            }
+        });
+		//添加结束
 	}
 
 	public void remove(final Mascot mascot) {
