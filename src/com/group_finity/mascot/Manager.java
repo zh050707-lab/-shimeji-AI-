@@ -68,40 +68,47 @@ private final AiChatService aiService = new DeepseekChatService();
         final PopupMenu menu = new PopupMenu(); // 创建一个新的弹出菜单
 
         // --- AI 对话菜单项 ---
-        // 从语言文件中获取 "ChatWithAI" 的显示文本
         final MenuItem aiChatItem = new MenuItem(Main.getInstance().getLanguageBundle().getString("ChatWithAI")); 
         
-        // 为菜单项添加点击事件监听器
         aiChatItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(final ActionEvent e) {
-                // 当菜单项被点击时执行这里的代码
                 try {
-                    // 1. 手动实例化我们的 ChatAction，并注入 AI 服务
-                    Action chatAction = new com.group_finity.mascot.action.ChatAction(
-                        new VariableMap(), // 使用空的参数 Map
-                        aiService          // 将我们之前创建的 aiService 实例传递给 Action
+                    // 获取当前桌宠使用的 Configuration（包含 schema）
+                    final Configuration config = Main.getInstance().getConfiguration(mascot.getImageSet());
+                    final java.util.ResourceBundle schema = config.getSchema();
+
+                    // 创建一个空的动画列表（如果需要可从 config/资源加载真实动画）
+                    final java.util.List<com.group_finity.mascot.animation.Animation> animations = new java.util.ArrayList<com.group_finity.mascot.animation.Animation>();
+
+                    // 创建参数 map
+                    final com.group_finity.mascot.script.VariableMap params = new com.group_finity.mascot.script.VariableMap();
+
+                    // 创建 AI 服务（也可改为复用单例）
+                    final com.group_finity.mascot.ai.AiChatService aiService = new com.group_finity.mascot.ai.DeepseekChatService();
+
+                    // 使用与 ChatAction 构造器匹配的参数
+                    com.group_finity.mascot.action.Action chatAction = new com.group_finity.mascot.action.ChatAction(
+                        schema,
+                        animations,
+                        params,
+                        aiService
                     );
 
-                    // 2. 使用 UserBehavior 来包装这个 Action
-                    //    UserBehavior 会强制执行这个 Action 直到它结束 (hasNext() 返回 false)
-                    mascot.setBehavior(new UserBehavior(chatAction));
+                    // 使用名字 "Chat" 和当前 configuration 构造 UserBehavior（与其构造器签名匹配）
+                    mascot.setBehavior(new com.group_finity.mascot.behavior.UserBehavior(
+                        "Chat",
+                        chatAction,
+                        config
+                    ));
                     
-                } catch (Exception ex) {
-                    // 如果创建或设置 Behavior 时出错，记录日志
+                } catch (final Exception ex) {
                     log.log(Level.WARNING, "无法启动 AI 聊天", ex);
-                    // （可选）你可以在这里向用户显示一个错误提示
-                    // JOptionPane.showMessageDialog(null, "启动 AI 聊天失败: " + ex.getMessage());
                 }
             }
         });
         menu.add(aiChatItem); // 将 AI 对话菜单项添加到菜单中
         // --- AI 菜单项结束 ---
-
-        // 你可以在这里添加分隔符或其他菜单项 (如果需要)
-        // menu.addSeparator();
-        // final MenuItem exampleItem = new MenuItem("其他功能...");
-        // menu.add(exampleItem);
 
         return menu; // 返回创建好的菜单
 	}
@@ -236,26 +243,15 @@ private final AiChatService aiService = new DeepseekChatService();
 	}
 
 	public void add(final Mascot mascot) {
-		synchronized (this.getAdded()) {
-			this.getAdded().add(mascot);
-			this.getRemoved().remove(mascot);
-		}
-		mascot.setManager(this);
-		
-		// 为桌宠的窗口添加鼠标事件监听器
-		mascot.getWindow().addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseReleased(final MouseEvent e) {
-                // 检查事件是否是弹出菜单触发器（通常是鼠标右键点击）
-                if (e.isPopupTrigger()) {
-                    // 调用我们添加的 constructMenu 方法来创建菜单，
-                    // 并在鼠标点击的位置显示它
-                    constructMenu(mascot).show(mascot.getWindow(), e.getX(), e.getY());
-                }
-            }
-        });
-		//添加结束
-	}
+        synchronized (this.getAdded()) {
+            this.getAdded().add(mascot);
+            this.getRemoved().remove(mascot);
+        }
+        mascot.setManager(this);
+
+        // NOTE: 不在 Manager 中访问 mascot.getWindow()（该方法是 private）
+        // 原来在这里添加鼠标监听并显示自定义弹出菜单的代码已移入 Mascot.showPopup()
+    }
 
 	public void remove(final Mascot mascot) {
 		synchronized (this.getAdded()) {

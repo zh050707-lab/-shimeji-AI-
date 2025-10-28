@@ -443,6 +443,48 @@ public class Mascot
         popup.add( onlyOneMenu );
         popup.add( closeMenu );
 
+        // 添加 AI 聊天菜单项
+        try {
+            final JMenuItem aiChatMenu = new JMenuItem(languageBundle.getString("ChatWithAI"));
+            aiChatMenu.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(final ActionEvent e) {
+                    // 在 Mascot 类内部可以访问私有方法和字段
+                    // 创建 AI 服务与 ChatAction，然后以 UserBehavior 包装并设置行为
+                    try {
+                        // 创建 AI 服务实例（你也可以把此服务复用/注入）
+                        com.group_finity.mascot.ai.AiChatService aiService = new com.group_finity.mascot.ai.DeepseekChatService();
+
+                        // 获取配置（schema）
+                        final com.group_finity.mascot.config.Configuration config = Main.getInstance().getConfiguration(imageSet);
+
+                        // 构造空动画列表（如果你希望加载动画，可从配置或资源中生成）
+                        java.util.List<com.group_finity.mascot.animation.Animation> animations = new java.util.ArrayList<com.group_finity.mascot.animation.Animation>();
+
+                        // 使用当前配置的 schema、动画列表和空参数 VariableMap 构造 ChatAction
+                        com.group_finity.mascot.action.Action chatAction = new com.group_finity.mascot.action.ChatAction(
+                            config.getSchema(),
+                            animations,
+                            new com.group_finity.mascot.script.VariableMap(),
+                            aiService
+                        );
+
+                        // 使用名字 "Chat"（或你想要的名字）和当前 Configuration 包装为 UserBehavior
+                        setBehavior(new com.group_finity.mascot.behavior.UserBehavior(
+                            "Chat",
+                            chatAction,
+                            config
+                        ));
+                    } catch (final Exception ex) {
+                        log.log(Level.WARNING, "无法启动 AI 聊天", ex);
+                    }
+                }
+            });
+            popup.add(aiChatMenu);
+        } catch (Exception ignore) {
+            // 若语言资源缺少 ChatWithAI，则忽略（不影响其它功能）
+        }
+
         getWindow( ).asComponent( ).requestFocus( );
                 
         // lightweight popups expect the shimeji window to draw them if they fall inside the shimeji window boundary

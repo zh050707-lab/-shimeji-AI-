@@ -94,6 +94,22 @@ public class DeepseekChatService implements AiChatService {
         worker.execute();
     }
 
+    @Override
+    public String getResponse(String userInput) {
+        final java.util.concurrent.atomic.AtomicReference<String> ref = new java.util.concurrent.atomic.AtomicReference<>("(no response)");
+        final java.util.concurrent.CountDownLatch latch = new java.util.concurrent.CountDownLatch(1);
+        getResponseAsync(userInput, (result) -> {
+            ref.set(result);
+            latch.countDown();
+        });
+        try {
+            latch.await();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+        return ref.get();
+    }
+
     /**
      * 简单的 JSON 解析器，用于提取 "content" 字段。
      * 避免引入 Java 1.6 中没有的 JSON 库。
