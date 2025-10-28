@@ -113,32 +113,105 @@ public class DeepseekChatService implements AiChatService {
     /**
      * 简单的 JSON 解析器，用于提取 "content" 字段。
      * 避免引入 Java 1.6 中没有的 JSON 库。
+     *
+     * 【已修改】增强了查找逻辑，以正确处理 Deepseek 的嵌套响应。
      */
     private String parseDeepseekResponse(String responseBody) {
         try {
-            // 寻找 "content": "..."
-            String contentKey = "\"content\": \"";
-            int startIndex = responseBody.indexOf(contentKey);
-            if (startIndex == -1) {
-                return "（无法解析 AI 回复）";
+            // 调试辅助：如果解析失败，我们会在调用处打印整个 responseBody。
+            // 这里直接实现更鲁棒的查找：优先在 assistant 出现之后查找 content，
+            // 若失败则尝试最近的 content（从后往前），最后尝试第一次出现的 content。
+
+            // 1) 尝试在包含 "assistant" 的位置之后查找 content
+            int assistantIndex = responseBody.indexOf("assistant");
+            int contentPos = -1;
+            if (assistantIndex != -1) {
+                contentPos = indexOfContentKeyAfter(responseBody, assistantIndex);
             }
-            
-            startIndex += contentKey.length(); // 移动到回复内容的开头
-            
-            // 寻找内容的结尾 "
-            int endIndex = responseBody.indexOf("\"", startIndex);
+
+            // 2) 如果上面失败，尝试从后往前找到最后一个 content
+            if (contentPos == -1) {
+                contentPos = lastIndexOfContentKey(responseBody);
+            }
+
+            // 3) 如果仍然失败，尝试第一次出现的 content
+            if (contentPos == -1) {
+                contentPos = indexOfContentKeyAfter(responseBody, 0);
+            }
+
+            if (contentPos == -1) {
+                // 返回的结构不包含 content，记录用于调试
+                return "（无法解析 AI 回复：未找到 content 键）";
+            }
+
+            // 找到 content key 后，定位冒号后的起始引号
+            int colon = responseBody.indexOf(':', contentPos);
+            if (colon == -1) {
+                return "（无法解析 AI 回复：content 后缺少冒号）";
+            }
+
+            // 找到第一个未被空格阻挡的双引号（value 的起始引号）
+            int i = colon + 1;
+            while (i < responseBody.length() && Character.isWhitespace(responseBody.charAt(i))) {
+                i++;
+            }
+            if (i >= responseBody.length() || responseBody.charAt(i) != '\"') {
+                // 如果不是双引号，尝试处理 content: { ... } 的情况（返回整个对象的文本）
+                // 为简单起见，返回无法解析
+                return "（无法解析 AI 回复：content 值不是字符串）";
+            }
+
+            int startIndex = i + 1;
+            int endIndex = findClosingQuote(responseBody, startIndex);
             if (endIndex == -1) {
-                return "（无法解析 AI 回复）";
+                return "（无法解析 AI 回复：未找到结束引号）";
             }
-            
-            // 提取内容并处理转义字符
-            return unescapeJson(responseBody.substring(startIndex, endIndex));
+
+            String raw = responseBody.substring(startIndex, endIndex);
+            return unescapeJson(raw);
         } catch (Exception e) {
             e.printStackTrace();
             return "（解析回复时出错）";
         }
     }
     
+    /** 在 fromIndex 之后寻找 "content" 键的起始位置（返回键名的引号开头索引），找不到返回 -1 */
+    private int indexOfContentKeyAfter(String s, int fromIndex) {
+        int idx = s.indexOf("\"content\"", Math.max(0, fromIndex));
+        if (idx != -1) return idx;
+        // 兼容无双引号或不同空格的情形，查找 content:
+        idx = s.indexOf("content", Math.max(0, fromIndex));
+        return idx == -1 ? -1 : idx;
+    }
+
+    /** 从后往前查找 "content" 键，返回找到位置或 -1 */
+    private int lastIndexOfContentKey(String s) {
+        int idx = s.lastIndexOf("\"content\"");
+        if (idx != -1) return idx;
+        idx = s.lastIndexOf("content");
+        return idx;
+    }
+
+    /** 找到未被转义的关闭引号位置，从 start (第一个字符后) 开始搜索，找不到返回 -1 */
+    private int findClosingQuote(String s, int start) {
+        for (int i = start; i < s.length(); i++) {
+            char c = s.charAt(i);
+            if (c == '"') {
+                // 计算前导反斜杠数量，若为偶数则该引号未被转义
+                int backslashes = 0;
+                int j = i - 1;
+                while (j >= 0 && s.charAt(j) == '\\') {
+                    backslashes++;
+                    j--;
+                }
+                if ((backslashes % 2) == 0) {
+                    return i;
+                }
+            }
+        }
+        return -1;
+    }
+
     /**
      * 辅助方法：转义 JSON 字符串中的特殊字符
      */
