@@ -1,11 +1,13 @@
 package com.group_finity.mascot.ai;
 
+import com.group_finity.mascot.Main;
 import javax.swing.SwingWorker;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.Properties;
 
 /**
  * AI 服务的 Deepseek API 实现。
@@ -13,20 +15,42 @@ import java.net.URL;
  */
 public class DeepseekChatService implements AiChatService {
 
-    private static final String API_KEY = "sk-3750675d0be6489b851f4db22a4d2cd8";
+    // 使用配置中的 API Key（由设置窗口保存到 conf/settings.properties）
+    private final String apiKey;
+    private final boolean enabled;
     
     private static final String API_URL = "https://api.deepseek.com/chat/completions";
 
     public DeepseekChatService() {
-        // 构造函数，你可以在这里检查 API Key 是否已设置
-        if (API_KEY.equals("sk-xxxxxxxxxxxxxxxxxxxxxxxx")) {
-            System.err.println("警告：尚未在 DeepseekChatService.java 中设置 API Key！");
+        // 从主配置读取 AI 设置（settings.properties）
+        Properties props = null;
+        try {
+            if (Main.getInstance() != null) {
+                props = Main.getInstance().getProperties();
+            }
+        } catch (Throwable t) {
+            props = null;
+        }
+        if (props == null) {
+            props = new Properties();
+        }
+        String key = props.getProperty("ai.api_key", "").trim();
+        boolean enabledProp = Boolean.parseBoolean(props.getProperty("ai.enabled", "false"));
+        this.apiKey = key;
+        this.enabled = enabledProp && !this.apiKey.isEmpty();
+        if (!this.enabled) {
+            System.err.println("AI 服务未启用或未配置 API Key，已禁用 DeepseekChatService。");
         }
     }
 
     @Override
     public void getResponseAsync(String userInput, java.util.function.Consumer<String> callback) {
-        
+        // 如果未启用或未配置 API Key，立即返回友好提示
+        if (!this.enabled) {
+            callback.accept("AI 未启用或未配置 API Key。请在设置中填写 API Key 并启用 AI。");
+            return;
+        }
+
         // 使用 SwingWorker 确保网络请求在后台线程
         SwingWorker<String, Void> worker = new SwingWorker<String, Void>() {
             @Override
@@ -42,7 +66,7 @@ public class DeepseekChatService implements AiChatService {
                 HttpURLConnection conn = (HttpURLConnection) url.openConnection();
                 conn.setRequestMethod("POST");
                 conn.setRequestProperty("Content-Type", "application/json");
-                conn.setRequestProperty("Authorization", "Bearer " + API_KEY);
+                conn.setRequestProperty("Authorization", "Bearer " + DeepseekChatService.this.apiKey);
                 conn.setDoOutput(true); // 允许发送请求体
 
                 // 3. 发送请求

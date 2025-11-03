@@ -141,6 +141,17 @@ public class SettingsWindow extends javax.swing.JDialog
             if( !item.isEmpty( ) )
                 blacklistData.add( item );
         lstInteractiveWindowsBlacklist.setListData( blacklistData.toArray( ) );
+
+        // AI settings
+        try {
+            chkAiEnabled.setSelected( Boolean.parseBoolean( properties.getProperty( "ai.enabled", "false" ) ) );
+            txtAiApiKey.setText( properties.getProperty( "ai.api_key", "" ) );
+            txtAiEndpoint.setText( properties.getProperty( "ai.endpoint", "https://api.example.com" ) );
+            cmbAiPersonality.setSelectedItem( properties.getProperty( "ai.personality", "Friendly" ) );
+            chkAiLogConversations.setSelected( Boolean.parseBoolean( properties.getProperty( "ai.log_conversations", "false" ) ) );
+        } catch( Exception e ) {
+            // ignore
+        }
         
         Properties themeProperties = new Properties( );
         FileInputStream input;
@@ -509,6 +520,15 @@ public class SettingsWindow extends javax.swing.JDialog
         btnBackgroundImageRemove = new javax.swing.JButton();
         cmbBackgroundImageMode = new javax.swing.JComboBox<String>();
         pnlAbout = new javax.swing.JPanel();
+    pnlAI = new javax.swing.JPanel();
+    chkAiEnabled = new javax.swing.JCheckBox();
+    lblAiApiKey = new javax.swing.JLabel();
+    txtAiApiKey = new javax.swing.JTextField();
+    lblAiEndpoint = new javax.swing.JLabel();
+    txtAiEndpoint = new javax.swing.JTextField();
+    lblAiPersonality = new javax.swing.JLabel();
+    cmbAiPersonality = new javax.swing.JComboBox<String>();
+    chkAiLogConversations = new javax.swing.JCheckBox();
         glue1 = new javax.swing.Box.Filler(new java.awt.Dimension(0, 0), new java.awt.Dimension(0, 0), new java.awt.Dimension(0, 32767));
         lblIcon = new javax.swing.JLabel();
         rigid1 = new javax.swing.Box.Filler(new java.awt.Dimension(0, 15), new java.awt.Dimension(0, 15), new java.awt.Dimension(0, 15));
@@ -693,6 +713,38 @@ public class SettingsWindow extends javax.swing.JDialog
         );
 
         pnlInteractiveTabs.addTab("Whitelist", pnlWhitelistTab);
+
+    // --- AI settings tab ---
+    pnlAI.setLayout(new javax.swing.BoxLayout(pnlAI, javax.swing.BoxLayout.Y_AXIS));
+    chkAiEnabled.setText("Enable AI");
+    pnlAI.add(chkAiEnabled);
+
+    javax.swing.JPanel aiRow1 = new javax.swing.JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.LEFT));
+    lblAiApiKey.setText("API Key:");
+    aiRow1.add(lblAiApiKey);
+    txtAiApiKey.setColumns(30);
+    aiRow1.add(txtAiApiKey);
+    pnlAI.add(aiRow1);
+
+    javax.swing.JPanel aiRow2 = new javax.swing.JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.LEFT));
+    lblAiEndpoint.setText("API Endpoint:");
+    aiRow2.add(lblAiEndpoint);
+    txtAiEndpoint.setColumns(30);
+    aiRow2.add(txtAiEndpoint);
+    pnlAI.add(aiRow2);
+
+    javax.swing.JPanel aiRow3 = new javax.swing.JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.LEFT));
+    lblAiPersonality.setText("Personality:");
+    aiRow3.add(lblAiPersonality);
+    cmbAiPersonality.setModel(new javax.swing.DefaultComboBoxModel<String>(new String[] { "Friendly", "Professional", "Mischievous" }));
+    aiRow3.add(cmbAiPersonality);
+    pnlAI.add(aiRow3);
+
+    chkAiLogConversations.setText("Log conversations");
+    pnlAI.add(chkAiLogConversations);
+
+    pnlTabs.addTab("AI", pnlAI);
+
 
         lstInteractiveWindowsBlacklist.setModel(new javax.swing.AbstractListModel()
         {
@@ -1896,6 +1948,12 @@ public class SettingsWindow extends javax.swing.JDialog
                     properties.setProperty( "BackgroundMode", backgroundMode );
                     properties.setProperty( "BackgroundImage", backgroundImage == null ? "" : backgroundImage );
                 }
+                // AI settings
+                properties.setProperty( "ai.enabled", String.valueOf( chkAiEnabled.isSelected() ) );
+                properties.setProperty( "ai.api_key", txtAiApiKey.getText() );
+                properties.setProperty( "ai.endpoint", txtAiEndpoint.getText() );
+                properties.setProperty( "ai.personality", cmbAiPersonality.getSelectedItem() == null ? "Friendly" : cmbAiPersonality.getSelectedItem().toString() );
+                properties.setProperty( "ai.log_conversations", String.valueOf( chkAiLogConversations.isSelected() ) );
                 
                 properties.store( output, "Shimeji-ee Configuration Options" );
             }
@@ -2644,6 +2702,15 @@ public class SettingsWindow extends javax.swing.JDialog
     private javax.swing.JList lstInteractiveWindows;
     private javax.swing.JList lstInteractiveWindowsBlacklist;
     private javax.swing.JPanel pnlAbout;
+    private javax.swing.JPanel pnlAI;
+    private javax.swing.JCheckBox chkAiEnabled;
+    private javax.swing.JLabel lblAiApiKey;
+    private javax.swing.JTextField txtAiApiKey;
+    private javax.swing.JLabel lblAiEndpoint;
+    private javax.swing.JTextField txtAiEndpoint;
+    private javax.swing.JLabel lblAiPersonality;
+    private javax.swing.JComboBox<String> cmbAiPersonality;
+    private javax.swing.JCheckBox chkAiLogConversations;
     private javax.swing.JPanel pnlAboutButtons;
     private javax.swing.JPanel pnlBackgroundImage;
     private javax.swing.JPanel pnlBackgroundPreview;
