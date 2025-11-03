@@ -17,9 +17,19 @@ public class ChatWindow extends JDialog {
     private final JTextArea chatDisplay;
     private final JTextField inputField;
     private final java.util.function.Consumer<String> onUserInput; // 回调函数，当用户输入时调用
+    private com.group_finity.mascot.Mascot mascot; // 关联的桌宠实例
+    private Runnable onClose; // 窗口关闭时的回调函数
 
     // 拖动偏移（按下时记录）
     private Point dragOffset;
+    
+    public void setMascot(com.group_finity.mascot.Mascot mascot) {
+        this.mascot = mascot;
+    }
+    
+    public void setOnClose(Runnable onClose) {
+        this.onClose = onClose;
+    }
 
     public ChatWindow(Frame owner, java.util.function.Consumer<String> onUserInput) {
         // 使用 JDialog 的 Frame 构造器；owner 可以为 null（JDialog 处理 null 更可靠）
@@ -54,6 +64,10 @@ public class ChatWindow extends JDialog {
                     inputField.setText("");
                 } catch (Exception ex) {
                     // ignore
+                }
+                // 调用关闭回调
+                if (onClose != null) {
+                    onClose.run();
                 }
                 dispose();
             }

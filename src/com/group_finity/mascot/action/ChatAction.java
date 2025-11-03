@@ -40,6 +40,26 @@ public class ChatAction extends ActionBase {
         // 在 EDT 上创建并显示聊天窗口
         SwingUtilities.invokeLater(() -> {
             chatWindow = new ChatWindow(null, this::handleUserInput);
+            chatWindow.setMascot(mascot);
+            
+            // 设置窗口关闭时的处理
+            chatWindow.setOnClose(() -> {
+                try {
+                    // 让桌宠恢复默认行为
+                    mascot.setBehavior(com.group_finity.mascot.Main.getInstance()
+                        .getConfiguration(mascot.getImageSet())
+                        .buildNextBehavior(null, mascot));
+                } catch (Exception ex) {
+                    // 如果失败,使用Walk行为
+                    try {
+                        mascot.setBehavior(com.group_finity.mascot.Main.getInstance()
+                            .getConfiguration(mascot.getImageSet())
+                            .buildBehavior("Walk"));
+                    } catch (Exception e) {
+                        // 忽略错误
+                    }
+                }
+            });
 
             // 将窗口定位在桌宠上方（如果 mascot 可用的话）
             try {
