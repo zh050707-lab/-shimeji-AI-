@@ -5,7 +5,7 @@ import javax.script.Compilable;
 import javax.script.CompiledScript;
 import javax.script.ScriptEngine;
 import javax.script.ScriptException;
-import jdk.nashorn.api.scripting.NashornScriptEngineFactory;
+// Script engine provider is injected via ScriptEngineProviders to allow swapping engines
 
 import com.group_finity.mascot.exception.VariableException;
 
@@ -16,7 +16,7 @@ import com.group_finity.mascot.exception.VariableException;
 
 public class Script extends Variable {
 
-	private static final ScriptEngine engine = new NashornScriptEngineFactory( ).getScriptEngine( new ScriptFilter( ) );
+	private static final ScriptEngine engine = ScriptEngineProviders.getEngine();
         
 	private final String source;
 	
