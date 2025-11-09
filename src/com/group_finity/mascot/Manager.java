@@ -1,5 +1,10 @@
 package com.group_finity.mascot;
 
+import java.awt.MenuItem;
+import java.awt.Point;
+import java.awt.PopupMenu;       // 导入弹出菜单类
+import java.awt.event.ActionEvent; // 导入动作事件类
+import java.awt.event.ActionListener; // 导入动作监听器接口
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -8,27 +13,13 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import com.group_finity.mascot.ai.AiChatService; // 导入我们的新接口
+import com.group_finity.mascot.ai.DeepseekChatService; // 导入 Deepseek 实现
 import com.group_finity.mascot.config.Configuration;
 import com.group_finity.mascot.exception.BehaviorInstantiationException;
 import com.group_finity.mascot.exception.CantBeAliveException;
-import java.awt.Point;
-// 下面是添加的菜单触发器
-import com.group_finity.mascot.Main;
-import com.group_finity.mascot.Mascot;
-import com.group_finity.mascot.action.Action; // 确保 Action 被导入
-import com.group_finity.mascot.behavior.UserBehavior; // 导入 UserBehavior
-import com.group_finity.mascot.ai.AiChatService; // 导入我们的新接口
-import com.group_finity.mascot.ai.DeepseekChatService; // 导入 Deepseek 实现
-import com.group_finity.mascot.script.VariableMap; // 导入 VariableMap
-import java.awt.MenuItem;
+import com.group_finity.mascot.memory.MemoryManager; // 导入内存管理器
 
-//下面是ai菜单栏需要的import
-import java.awt.MenuItem;         // 导入菜单项类
-import java.awt.PopupMenu;       // 导入弹出菜单类
-import java.awt.event.ActionEvent; // 导入动作事件类
-import java.awt.event.ActionListener; // 导入动作监听器接口
-import java.awt.event.MouseAdapter; // 导入鼠标事件适配器
-import java.awt.event.MouseEvent;  // 导入鼠标事件类
 
 
 /**
@@ -56,7 +47,8 @@ public class Manager {
      * AI 对话服务实例
      * OCP: 依赖于抽象 AiChatService
      */
-private final AiChatService aiService = new DeepseekChatService();
+private final MemoryManager memoryManager = new MemoryManager();
+private final AiChatService aiService = new DeepseekChatService(memoryManager);
 
 /**
 	 * 为指定的桌宠创建右键弹出菜单。
@@ -84,8 +76,8 @@ private final AiChatService aiService = new DeepseekChatService();
                     // 创建参数 map
                     final com.group_finity.mascot.script.VariableMap params = new com.group_finity.mascot.script.VariableMap();
 
-                    // 创建 AI 服务（也可改为复用单例）
-                    final com.group_finity.mascot.ai.AiChatService aiService = new com.group_finity.mascot.ai.DeepseekChatService();
+                    // 复用已有的 AI 服务实例
+                    final com.group_finity.mascot.ai.AiChatService aiService = Manager.this.aiService;
 
                     // 使用与 ChatAction 构造器匹配的参数
                     com.group_finity.mascot.action.Action chatAction = new com.group_finity.mascot.action.ChatAction(

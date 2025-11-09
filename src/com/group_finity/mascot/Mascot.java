@@ -10,12 +10,13 @@ import java.awt.event.ItemListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionListener;
+import java.util.ArrayList;
+import java.util.ResourceBundle;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.ArrayList;
-import java.util.ResourceBundle;
 
+import javax.sound.sampled.Clip;
 import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JMenuItem;
 import javax.swing.JPopupMenu;
@@ -23,7 +24,6 @@ import javax.swing.JSeparator;
 import javax.swing.SwingUtilities;
 import javax.swing.event.PopupMenuEvent;
 import javax.swing.event.PopupMenuListener;
-import javax.sound.sampled.Clip;
 
 import com.group_finity.mascot.behavior.Behavior;
 import com.group_finity.mascot.environment.Area;
@@ -452,8 +452,11 @@ public class Mascot
                     // 在 Mascot 类内部可以访问私有方法和字段
                     // 创建 AI 服务与 ChatAction，然后以 UserBehavior 包装并设置行为
                     try {
-                        // 创建 AI 服务实例（你也可以把此服务复用/注入）
-                        com.group_finity.mascot.ai.AiChatService aiService = new com.group_finity.mascot.ai.DeepseekChatService();
+                        // 创建新的聊天窗口和对话记忆管理器
+                        com.group_finity.mascot.memory.MemoryManager memoryManager = new com.group_finity.mascot.memory.MemoryManager();
+                        
+                        // 创建 AI 服务实例（使用同一个对话记忆管理器）
+                        com.group_finity.mascot.ai.AiChatService aiService = new com.group_finity.mascot.ai.DeepseekChatService(memoryManager);
 
                         // 获取配置（schema）
                         final com.group_finity.mascot.config.Configuration config = Main.getInstance().getConfiguration(imageSet);

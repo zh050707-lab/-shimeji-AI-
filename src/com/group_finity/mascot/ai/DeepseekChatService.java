@@ -1,13 +1,17 @@
 package com.group_finity.mascot.ai;
 
-import com.group_finity.mascot.Main;
-import javax.swing.SwingWorker;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.List;
 import java.util.Properties;
+
+import javax.swing.SwingWorker;
+
+import com.group_finity.mascot.Main;
+import com.group_finity.mascot.memory.MemoryManager;
 
 /**
  * AI 服务的 Deepseek API 实现。
@@ -15,13 +19,16 @@ import java.util.Properties;
  */
 public class DeepseekChatService implements AiChatService {
 
-    // 使用配置中的 API Key（由设置窗口保存到 conf/settings.properties）
+    // 使用配置中的 API Key（由设置窗口保存到 conf/settings.properties） 
     private final String apiKey;
+    private final String apiEndpoint;
+    private final String personality;
+    private final String systemPrompt;
     private final boolean enabled;
-    
-    private static final String API_URL = "https://api.deepseek.com/chat/completions";
+    private final boolean logConversations;
+    private final MemoryManager memoryManager;
 
-    public DeepseekChatService() {
+    public DeepseekChatService(MemoryManager memoryManager) {
         // 从主配置读取 AI 设置（settings.properties）
         Properties props = null;
         try {
@@ -34,13 +41,20 @@ public class DeepseekChatService implements AiChatService {
         if (props == null) {
             props = new Properties();
         }
-        String key = props.getProperty("ai.api_key", "").trim();
+        
+        // 读取所有 AI 相关设置
+        this.apiKey = props.getProperty("ai.api_key", "").trim();
+        this.apiEndpoint = props.getProperty("ai.endpoint", "https://api.deepseek.com/chat/completions").trim();
+        this.personality = props.getProperty("ai.personality", "Friendly").trim();
+        this.systemPrompt = props.getProperty("ai.system_prompt", "").trim();
+        this.logConversations = Boolean.parseBoolean(props.getProperty("ai.log_conversations", "false"));
         boolean enabledProp = Boolean.parseBoolean(props.getProperty("ai.enabled", "false"));
-        this.apiKey = key;
+        
         this.enabled = enabledProp && !this.apiKey.isEmpty();
         if (!this.enabled) {
             System.err.println("AI 服务未启用或未配置 API Key，已禁用 DeepseekChatService。");
         }
+        this.memoryManager = memoryManager; // 使用传入的对话记忆管理器
     }
 
     @Override
@@ -55,18 +69,78 @@ public class DeepseekChatService implements AiChatService {
         SwingWorker<String, Void> worker = new SwingWorker<String, Void>() {
             @Override
             protected String doInBackground() throws Exception {
-                // 1. 构建 JSON 请求体
-                // 注意：为了兼容 Java 1.6，我们手动拼接 JSON 字符串
-                String jsonInputString = "{\"model\": \"deepseek-chat\", \"messages\": [" +
-                                         "{\"role\": \"user\", \"content\": \"" + escapeJson(userInput) + "\"}" +
-                                         "]}";
+                // 1. 构建 JSON 请求体，包含历史对话
+                StringBuilder messagesJson = new StringBuilder();
+                messagesJson.append("[");
 
+                // 先添加系统初始设定（如果有）
+                if (!systemPrompt.isEmpty()) {
+                    String fullSystemPrompt = "你的性格是 " + personality + "。" + systemPrompt;
+                    messagesJson.append("{\"role\": \"system\", \"content\": \"")
+                              .append(escapeJson(fullSystemPrompt))
+                              .append("\"}");
+                }
+
+                // 添加最近的历史对话（最多5条）
+                try {
+                    List<MemoryManager.Message> history = memoryManager.getRecentMessages(5);
+                    for (MemoryManager.Message msg : history) {
+                        if (messagesJson.length() > 1) {
+                            messagesJson.append(",");
+                        }
+                        messagesJson.append("{\"role\": \"")
+                                  .append(msg.getRole())
+                                  .append("\", \"content\": \"")
+                                  .append(escapeJson(msg.getText()))
+                                  .append("\"}");
+                    }
+                    
+                    // 记录对话历史
+                    if (logConversations) {
+                        try {
+                            java.io.FileWriter fw = new java.io.FileWriter("CHAT_HISTORY_" + 
+                                new java.text.SimpleDateFormat("yyyy-MM-dd").format(new java.util.Date()) + ".md", true);
+                            java.io.BufferedWriter bw = new java.io.BufferedWriter(fw);
+                            for (MemoryManager.Message msg : history) {
+                                bw.write(msg.getRole() + ": " + msg.getText());
+                                bw.newLine();
+                            }
+                            bw.close();
+                        } catch (Exception e) {
+                            System.err.println("无法记录对话历史: " + e.getMessage());
+                        }
+                    }
+                } catch (Exception e) {
+                    System.err.println("无法加载历史对话: " + e.getMessage());
+                }
+
+                // 添加当前用户输入
+                if (messagesJson.length() > 1) {
+                    messagesJson.append(",");
+                }
+                messagesJson.append("{\"role\": \"user\", \"content\": \"")
+                           .append(escapeJson(userInput))
+                           .append("\"}");
+                messagesJson.append("]");
+
+                String jsonInputString = "{\"model\": \"deepseek-chat\", \"messages\": " + messagesJson.toString() + "}";
                 // 2. 创建 URL 和 HttpURLConnection
-                URL url = new URL(API_URL);
+                URL url = new URL(apiEndpoint);
+                // 诊断日志：打印将要发送到的 endpoint 和请求体大小（注意：不要打印 API Key）
+                try {
+                    int len = jsonInputString == null ? 0 : jsonInputString.length();
+                    String preview = jsonInputString == null ? "" : (jsonInputString.length() > 200 ? jsonInputString.substring(0, 200) + "..." : jsonInputString);
+                    System.err.println("[AI DEBUG] POST " + url.toString() + " payload_len=" + len + " preview=" + preview);
+                } catch (Throwable t) {
+                    // ignore logging errors
+                }
                 HttpURLConnection conn = (HttpURLConnection) url.openConnection();
                 conn.setRequestMethod("POST");
                 conn.setRequestProperty("Content-Type", "application/json");
                 conn.setRequestProperty("Authorization", "Bearer " + DeepseekChatService.this.apiKey);
+                // 设置连接和读取超时，避免无限等待
+                conn.setConnectTimeout(10000); // 10秒连接超时
+                conn.setReadTimeout(30000); // 30秒读取超时
                 conn.setDoOutput(true); // 允许发送请求体
 
                 // 3. 发送请求
@@ -91,15 +165,21 @@ public class DeepseekChatService implements AiChatService {
                         return parseDeepseekResponse(response.toString());
                     }
                 } else {
-                    // 如果出错，读取错误流
-                    try (BufferedReader br = new BufferedReader(
-                            new InputStreamReader(conn.getErrorStream(), "UTF-8"))) {
-                        StringBuilder errorResponse = new StringBuilder();
-                        String errorLine;
-                        while ((errorLine = br.readLine()) != null) {
-                            errorResponse.append(errorLine.trim());
+                    // 如果出错，优先读取错误流；如果错误流为空（某些服务器/连接会返回 null），回退到 response message
+                    java.io.InputStream es = conn.getErrorStream();
+                    if (es != null) {
+                        try (BufferedReader br = new BufferedReader(new InputStreamReader(es, "UTF-8"))) {
+                            StringBuilder errorResponse = new StringBuilder();
+                            String errorLine;
+                            while ((errorLine = br.readLine()) != null) {
+                                errorResponse.append(errorLine.trim());
+                            }
+                            throw new RuntimeException("HTTP 错误码: " + responseCode + ", 错误信息: " + errorResponse.toString() + ", url=" + url.toString());
                         }
-                        throw new RuntimeException("HTTP 错误码: " + responseCode + ", 错误信息: " + errorResponse.toString());
+                    } else {
+                        String respMsg = "";
+                        try { respMsg = conn.getResponseMessage(); } catch (Throwable t) { /* ignore */ }
+                        throw new RuntimeException("HTTP 错误码: " + responseCode + ", 无错误流, responseMessage=" + respMsg + ", url=" + url.toString());
                     }
                 }
             }
@@ -110,8 +190,12 @@ public class DeepseekChatService implements AiChatService {
                     String result = get(); // 从 doInBackground 获取结果
                     callback.accept(result); // 将结果传递给回调
                 } catch (Exception e) {
+                    // 打印完整异常到 stderr 供调试
                     e.printStackTrace();
-                    callback.accept("抱歉，我连接 Deepseek 失败了...");
+                    String msg = e.getMessage();
+                    if (msg == null) msg = e.toString();
+                    // 将更详细的错误信息反馈到 UI（简短版）
+                    callback.accept("抱歉，我连接 Deepseek 失败了: " + msg);
                 }
             }
         };

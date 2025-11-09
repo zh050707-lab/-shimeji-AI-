@@ -1,11 +1,26 @@
 package com.group_finity.mascot.ui;
 
-import javax.swing.*;
-import java.awt.*;
+import java.awt.BorderLayout;
+import java.awt.Cursor;
+import java.awt.FlowLayout;
+import java.awt.Frame;
+import java.awt.Point;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.io.IOException;
+import java.util.List;
+
+import javax.swing.JButton;
+import javax.swing.JDialog;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JTextArea;
+import javax.swing.JTextField;
+import javax.swing.WindowConstants;
+
+import com.group_finity.mascot.memory.MemoryManager;
 
 /**
  * 聊天 UI 窗口
@@ -19,6 +34,7 @@ public class ChatWindow extends JDialog {
     private final java.util.function.Consumer<String> onUserInput; // 回调函数，当用户输入时调用
     private com.group_finity.mascot.Mascot mascot; // 关联的桌宠实例
     private Runnable onClose; // 窗口关闭时的回调函数
+    private final MemoryManager memoryManager; // 对话记忆管理器
 
     // 拖动偏移（按下时记录）
     private Point dragOffset;
@@ -35,6 +51,7 @@ public class ChatWindow extends JDialog {
         // 使用 JDialog 的 Frame 构造器；owner 可以为 null（JDialog 处理 null 更可靠）
         super(owner, false); // false => 非模态
         this.onUserInput = onUserInput;
+        this.memoryManager = new MemoryManager();
 
         // 无装饰，外观类似 JWindow
         setUndecorated(true);
@@ -54,12 +71,7 @@ public class ChatWindow extends JDialog {
         deleteButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                // 清空对话并关闭窗口
-                try {
-                    chatDisplay.setText("");
-                } catch (Exception ex) {
-                    // ignore
-                }
+                // 保留历史记录但关闭窗口
                 try {
                     inputField.setText("");
                 } catch (Exception ex) {
@@ -80,7 +92,23 @@ public class ChatWindow extends JDialog {
         chatDisplay.setEditable(false);
         chatDisplay.setLineWrap(true);
         chatDisplay.setWrapStyleWord(true);
-        chatDisplay.setText("你好！想聊点什么？");
+        
+        // 加载最近的对话历史（最多显示10条）
+        StringBuilder initialText = new StringBuilder("你好！想聊点什么？\n\n");
+        initialText.append("=== 最近的对话记录 ===\n");
+        try {
+            List<MemoryManager.Message> history = memoryManager.getRecentMessages(10);
+            if (!history.isEmpty()) {
+                for (MemoryManager.Message msg : history) {
+                    String role = "assistant".equals(msg.getRole()) ? "桌宠" : "你";
+                    initialText.append(String.format("%s: %s\n", role, msg.getText()));
+                }
+                initialText.append("=== 历史记录结束 ===\n");
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        chatDisplay.setText(initialText.toString());
         JScrollPane scrollPane = new JScrollPane(chatDisplay);
         
         inputField = new JTextField(30);
@@ -162,17 +190,37 @@ public class ChatWindow extends JDialog {
     }
 
     public void displayUserMessage(String message) {
+        String text = chatDisplay.getText();
+        // 如果文本以历史记录分隔符结束，先添加一个换行
+        if (text.trim().endsWith("=== 历史记录结束 ===")) {
+            chatDisplay.append("\n");
+        }
         chatDisplay.append("\n你: " + message);
+        try {
+            memoryManager.addMessage("user", message);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     public void displayAiMessage(String message) {
+        String text = chatDisplay.getText();
+        // 如果文本以历史记录分隔符结束，先添加一个换行
+        if (text.trim().endsWith("=== 历史记录结束 ===")) {
+            chatDisplay.append("\n");
+        }
         chatDisplay.append("\n桌宠: " + message);
+        try {
+            memoryManager.addMessage("assistant", message);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
     
     public void setThinking(boolean thinking) {
         if (thinking) {
             inputField.setEnabled(false);
-            displayAiMessage("（思考中...）");
+            chatDisplay.append("\n桌宠: （思考中...）");
         } else {
             inputField.setEnabled(true);
             // 尝试移除最后一行的 "（思考中...）" 提示（若存在）
@@ -185,6 +233,19 @@ public class ChatWindow extends JDialog {
                     chatDisplay.setText("");
                 }
             }
+        }
+    }
+
+    /**
+     * 获取最近的对话记录（可选择条数）。
+     * 如果出现异常会返回空列表。
+     */
+    public java.util.List<MemoryManager.Message> getRecentMessages(int limit) {
+        try {
+            return memoryManager.getRecentMessages(limit);
+        } catch (IOException e) {
+            e.printStackTrace();
+            return new java.util.ArrayList<>();
         }
     }
 }

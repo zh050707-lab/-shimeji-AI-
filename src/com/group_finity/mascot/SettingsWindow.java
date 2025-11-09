@@ -5,26 +5,32 @@
  */
 package com.group_finity.mascot;
 
-import java.awt.Desktop;
 import java.awt.Color;
+import java.awt.Desktop;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Image;
 import java.awt.event.ItemEvent;
-import java.io.*;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.net.URI;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Properties;
 import java.util.ResourceBundle;
+
 import javax.swing.ImageIcon;
 import javax.swing.JColorChooser;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
-import javax.swing.SpinnerNumberModel;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
+import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
@@ -34,11 +40,10 @@ import javax.swing.text.AbstractDocument;
 import javax.swing.text.AttributeSet;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.DocumentFilter;
+
+import com.nilo.plaf.nimrod.NimRODFontDialog;
 import com.nilo.plaf.nimrod.NimRODLookAndFeel;
 import com.nilo.plaf.nimrod.NimRODTheme;
-import com.nilo.plaf.nimrod.NimRODFontDialog;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 
 /**
  * @author Kilkakon
@@ -149,6 +154,13 @@ public class SettingsWindow extends javax.swing.JDialog
             txtAiEndpoint.setText( properties.getProperty( "ai.endpoint", "https://api.example.com" ) );
             cmbAiPersonality.setSelectedItem( properties.getProperty( "ai.personality", "Friendly" ) );
             chkAiLogConversations.setSelected( Boolean.parseBoolean( properties.getProperty( "ai.log_conversations", "false" ) ) );
+                // 从配置文件加载系统提示
+                String systemPrompt = properties.getProperty( "ai.system_prompt", "" );
+                // 如果为空则使用默认值 
+                if(systemPrompt.trim().isEmpty()) {
+                    systemPrompt = "你是一个富有同理心和创造力的助手。你的目标是理解并增进用户的快乐。你具有观察力和洞察力,总是尝试猜测和理解用户的感受。在每次互动中,你都是友善、体贴的,且会使用可爱有趣的回应让对话充满活力。";
+                }
+                txtAiSystemPrompt.setText(systemPrompt);
         } catch( Exception e ) {
             // ignore
         }
@@ -529,6 +541,7 @@ public class SettingsWindow extends javax.swing.JDialog
     lblAiPersonality = new javax.swing.JLabel();
     cmbAiPersonality = new javax.swing.JComboBox<String>();
     chkAiLogConversations = new javax.swing.JCheckBox();
+    txtAiSystemPrompt = new javax.swing.JTextArea();
         glue1 = new javax.swing.Box.Filler(new java.awt.Dimension(0, 0), new java.awt.Dimension(0, 0), new java.awt.Dimension(0, 32767));
         lblIcon = new javax.swing.JLabel();
         rigid1 = new javax.swing.Box.Filler(new java.awt.Dimension(0, 15), new java.awt.Dimension(0, 15), new java.awt.Dimension(0, 15));
@@ -739,6 +752,16 @@ public class SettingsWindow extends javax.swing.JDialog
     cmbAiPersonality.setModel(new javax.swing.DefaultComboBoxModel<String>(new String[] { "Friendly", "Professional", "Mischievous" }));
     aiRow3.add(cmbAiPersonality);
     pnlAI.add(aiRow3);
+
+    javax.swing.JPanel aiRow4 = new javax.swing.JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.LEFT));
+    javax.swing.JLabel lblAiSystemPrompt = new javax.swing.JLabel("Initial Settings:");
+    aiRow4.add(lblAiSystemPrompt);
+    txtAiSystemPrompt = new javax.swing.JTextArea(5, 30);
+    txtAiSystemPrompt.setLineWrap(true);
+    txtAiSystemPrompt.setWrapStyleWord(true);
+    javax.swing.JScrollPane scrollPane = new javax.swing.JScrollPane(txtAiSystemPrompt);
+    aiRow4.add(scrollPane);
+    pnlAI.add(aiRow4);
 
     chkAiLogConversations.setText("Log conversations");
     pnlAI.add(chkAiLogConversations);
@@ -1954,6 +1977,8 @@ public class SettingsWindow extends javax.swing.JDialog
                 properties.setProperty( "ai.endpoint", txtAiEndpoint.getText() );
                 properties.setProperty( "ai.personality", cmbAiPersonality.getSelectedItem() == null ? "Friendly" : cmbAiPersonality.getSelectedItem().toString() );
                 properties.setProperty( "ai.log_conversations", String.valueOf( chkAiLogConversations.isSelected() ) );
+                // Make sure we're using the same key for loading and saving
+                properties.setProperty( "ai.system_prompt", txtAiSystemPrompt.getText() );
                 
                 properties.store( output, "Shimeji-ee Configuration Options" );
             }
@@ -2711,6 +2736,7 @@ public class SettingsWindow extends javax.swing.JDialog
     private javax.swing.JLabel lblAiPersonality;
     private javax.swing.JComboBox<String> cmbAiPersonality;
     private javax.swing.JCheckBox chkAiLogConversations;
+    private javax.swing.JTextArea txtAiSystemPrompt;
     private javax.swing.JPanel pnlAboutButtons;
     private javax.swing.JPanel pnlBackgroundImage;
     private javax.swing.JPanel pnlBackgroundPreview;
