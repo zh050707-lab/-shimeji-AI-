@@ -1564,6 +1564,11 @@ public class Main
     {
         this.getManager( ).disposeAll( );
         this.getManager( ).stop( );
+        try {
+            com.group_finity.mascot.sound.TTSPlayer.shutdown();
+        } catch (Throwable t) {
+            // ignore
+        }
         System.exit( 0 );
     }
 }

@@ -161,6 +161,12 @@ public class SettingsWindow extends javax.swing.JDialog
                     systemPrompt = "你是一个富有同理心和创造力的助手。你的目标是理解并增进用户的快乐。你具有观察力和洞察力,总是尝试猜测和理解用户的感受。在每次互动中,你都是友善、体贴的,且会使用可爱有趣的回应让对话充满活力。";
                 }
                 txtAiSystemPrompt.setText(systemPrompt);
+                // TTS 设置
+                try {
+                    chkTtsEnabled.setSelected( Boolean.parseBoolean( properties.getProperty( "TTS", "true" ) ) );
+                } catch (Exception ex) {
+                    // ignore
+                }
         } catch( Exception e ) {
             // ignore
         }
@@ -731,6 +737,11 @@ public class SettingsWindow extends javax.swing.JDialog
     pnlAI.setLayout(new javax.swing.BoxLayout(pnlAI, javax.swing.BoxLayout.Y_AXIS));
     chkAiEnabled.setText("Enable AI");
     pnlAI.add(chkAiEnabled);
+
+    // TTS enable checkbox
+    chkTtsEnabled = new javax.swing.JCheckBox();
+    chkTtsEnabled.setText("启用语音（本地 TTS）");
+    pnlAI.add(chkTtsEnabled);
 
     javax.swing.JPanel aiRow1 = new javax.swing.JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.LEFT));
     lblAiApiKey.setText("API Key:");
@@ -1979,6 +1990,8 @@ public class SettingsWindow extends javax.swing.JDialog
                 properties.setProperty( "ai.log_conversations", String.valueOf( chkAiLogConversations.isSelected() ) );
                 // Make sure we're using the same key for loading and saving
                 properties.setProperty( "ai.system_prompt", txtAiSystemPrompt.getText() );
+                // TTS setting
+                properties.setProperty( "TTS", String.valueOf( chkTtsEnabled.isSelected() ) );
                 
                 properties.store( output, "Shimeji-ee Configuration Options" );
             }
@@ -2729,6 +2742,7 @@ public class SettingsWindow extends javax.swing.JDialog
     private javax.swing.JPanel pnlAbout;
     private javax.swing.JPanel pnlAI;
     private javax.swing.JCheckBox chkAiEnabled;
+    private javax.swing.JCheckBox chkTtsEnabled;
     private javax.swing.JLabel lblAiApiKey;
     private javax.swing.JTextField txtAiApiKey;
     private javax.swing.JLabel lblAiEndpoint;

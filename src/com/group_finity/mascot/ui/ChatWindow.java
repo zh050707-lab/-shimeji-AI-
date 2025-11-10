@@ -85,6 +85,32 @@ public class ChatWindow extends JDialog {
             }
         });
         topPanel.add(deleteButton);
+        // TTS 切换按钮（在聊天窗口直接控制语音开关）
+        javax.swing.JToggleButton ttsToggle = new javax.swing.JToggleButton("语音");
+        ttsToggle.setFocusable(false);
+        ttsToggle.setToolTipText("启用/禁用 AI 回复语音（持久化到 conf/settings.properties）");
+        try {
+            boolean ttsEnabled = Boolean.parseBoolean(com.group_finity.mascot.Main.getInstance().getProperties().getProperty("TTS", "true"));
+            ttsToggle.setSelected(ttsEnabled);
+        } catch (Exception ex) {
+            // ignore
+        }
+        ttsToggle.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                boolean on = ttsToggle.isSelected();
+                try {
+                    com.group_finity.mascot.Main.getInstance().getProperties().setProperty("TTS", String.valueOf(on));
+                    java.nio.file.Path configPath = java.nio.file.Paths.get(".", "conf", "settings.properties");
+                    try (java.io.FileOutputStream out = new java.io.FileOutputStream(configPath.toFile())) {
+                        com.group_finity.mascot.Main.getInstance().getProperties().store(out, "Shimeji-ee Configuration Options");
+                    }
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
+            }
+        });
+        topPanel.add(ttsToggle);
         add(topPanel, BorderLayout.NORTH);
         // --- 顶部按钮面板结束 ---
 
@@ -214,6 +240,16 @@ public class ChatWindow extends JDialog {
             memoryManager.addMessage("assistant", message);
         } catch (IOException e) {
             e.printStackTrace();
+        }
+        // TTS 播放（仅在配置中开启且未全局静音时）
+        try {
+            boolean ttsEnabled = Boolean.parseBoolean(com.group_finity.mascot.Main.getInstance().getProperties().getProperty("TTS", "true"));
+            if (ttsEnabled && !com.group_finity.mascot.sound.Sounds.isMuted()) {
+                com.group_finity.mascot.sound.TTSPlayer.speakAsync(message);
+            }
+        } catch (Throwable t) {
+            // 不影响主流程
+            t.printStackTrace();
         }
     }
     
